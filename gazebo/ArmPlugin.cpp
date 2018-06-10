@@ -35,7 +35,7 @@
 / TODO - Tune the following hyperparameters
 /
 */
-#define GRIPPER_ONLY true
+#define GRIPPER_ONLY false
 #define INPUT_WIDTH 64
 #define INPUT_HEIGHT 64
 #define NUMBER_OF_ACTIONS 2 * DOF
