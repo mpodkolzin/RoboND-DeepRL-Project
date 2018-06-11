@@ -16,7 +16,7 @@
 #define JOINT_MAX	 2.0f
 
 // Turn on velocity based control
-#define VELOCITY_CONTROL false
+#define VELOCITY_CONTROL false // Task 1 #define VELOCITY_CONTROL true
 #define VELOCITY_MIN -0.2f
 #define VELOCITY_MAX  0.2f
 
@@ -26,9 +26,9 @@
 #define ALLOW_RANDOM true
 #define DEBUG_DQN false
 #define GAMMA 0.9f
-#define EPS_START 0.8f
-#define EPS_END 0.01f 
-#define EPS_DECAY 300 
+#define EPS_START 0.9f
+#define EPS_END 0.05f
+#define EPS_DECAY 200
 
 /*
 / TODO - Tune the following hyperparameters
@@ -40,9 +40,9 @@
 #define OPTIMIZER "RMSprop"
 #define LEARNING_RATE 0.15f
 #define REPLAY_MEMORY 10000
-#define BATCH_SIZE 32
+#define BATCH_SIZE 16
 #define USE_LSTM true
-#define LSTM_SIZE 128
+#define LSTM_SIZE 256
 
 /*
 / TODO - Define Reward Parameters
@@ -268,15 +268,15 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		/ TODO - Check if there is collision between the arm and object, then issue learning reward
 		/
 		*/
-
-		bool collisionCheck = (strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0) ? true : false;
+	
+		bool collisionCheck = ((strcmp(contacts->contact(i).collision1().c_str(), COLLISION_ITEM) == 0) || (strcmp(contacts->contact(i).collision2().c_str(), COLLISION_ARM) == 0)) ? true : false;
 		if (collisionCheck)
 		{
-			rewardHistory = REWARD_WIN * 100;
+			rewardHistory = REWARD_WIN * 10;
 			newReward  = true;
 			endEpisode = true;
 			return;
-		}
+		} 
 
 	}
 }
@@ -596,7 +596,8 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		/ TODO - Issue an interim reward based on the distance to the object
 		/
 		*/ 
-
+		
+		
 		if(!checkGroundContact)
 		{
 			const float distGoal = BoxDistance(gripper->GetBoundingBox(), prop->model->GetBoundingBox()); // compute the reward from distance to the goal
@@ -607,7 +608,7 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 			if( episodeFrames > 1 )
 			{
 				const float distDelta = lastGoalDistance - distGoal;
-				const float alpha = 0.1f;
+				const float alpha = 0.2f;
 
 				// compute the smoothed moving average of the delta of the distance to the goal
 				avgGoalDelta  = (avgGoalDelta * alpha) + (distDelta * (1.0f - alpha));
@@ -616,22 +617,22 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 				//rewardHistory = (avgGoalDelta > 0) ? REWARD_WIN / distGoal : REWARD_LOSS * distGoal;
 				if (avgGoalDelta > 0)
 				{
-					if(distGoal > 0.0f){
-						rewardHistory = REWARD_WIN * avgGoalDelta;
+					if(distGoal > 0.001f){
+						rewardHistory = REWARD_WIN / distGoal;
 					}
-					else if (distGoal == 0.0f){
-						rewardHistory = REWARD_WIN * 10.0f;
+					else if (distGoal < 0.001f || distGoal == 0.0f){
+						rewardHistory = REWARD_WIN / 2000.0f;
 					}
 				}
 				else {
 					rewardHistory = REWARD_LOSS * distGoal;
 				}
-				newReward = true;
-				//printf("reward = %f\n", rewardHistory);	
+				newReward = true;	
 			}
 
 			lastGoalDistance = distGoal;
-		}
+		} 
+		
 	}
 
 	// issue rewards and train DQN
